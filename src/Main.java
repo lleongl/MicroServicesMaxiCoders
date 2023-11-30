@@ -69,13 +69,26 @@ class Player {
 
         Map<Integer, FishDetail> fishDetails = new HashMap<>();
 
-        int fishCount = in.nextInt();
-        for (int i = 0; i < fishCount; i++) {
-            int fishId = in.nextInt();
-            int color = in.nextInt();
-            int type = in.nextInt();
-            fishDetails.put(fishId, new FishDetail(color, type));
+   int fishCount = in.nextInt();
+    for (int i = 0; i < fishCount; i++) {
+      int fishId = in.nextInt();
+      int color = in.nextInt();
+      int type = in.nextInt();
+      fishDetails.put(fishId, new FishDetail(color, type));
+
+      if (color != -1) {
+        if (!combinationsColors.containsKey(color)) {
+          combinationsColors.put(color, new HashSet<>());
         }
+
+        combinationsColors.get(color).add(fishId);
+
+        if (!combinationsTypes.containsKey(type)) {
+          combinationsTypes.put(type, new HashSet<>());
+        }
+        combinationsTypes.get(type).add(fishId);
+      }
+    }
 
         // game loop
         while (true) {
@@ -102,7 +115,9 @@ class Player {
                 int fishId = in.nextInt();
                 foeScans.add(fishId);
             }
-
+            combinationsColorsSavedFishesMissing =  new HashMap<>(combinationsColors);
+            combinationsTypesSavedFishesMissing = new HashMap<>(combinationsTypes);
+            printMissingCombinations();
             
 
             int myDroneCount = in.nextInt();
@@ -161,9 +176,9 @@ class Player {
                 String radar = in.next();
                 myRadarBlips.get(droneId).add(new RadarBlip(fishId, radar));
             }
-
             updateCombinationsFishesMissing( myScans, fishDetails);
-
+            shouldResurface ( myDrones, fishDetails);
+            
             String order = "wait 0 no order inputed";
             boolean putTheLightOn = Player.turnNumber % 3 == 0;
             int lightNumber = putTheLightOn ? 1 : 0; 
@@ -195,13 +210,23 @@ class Player {
                         else
                             order = String.format("MOVE %d 300 %d Detecting monster !!!", x ,lightNumber);
                     }
-                }else{              
+                }else{
+                    //no fleeing, no scanning, trying to find fish
+                    int targetedY = 8500;
+                    /*if(!Player.combinationsTypesSavedFishesMissing.get(1).isEmpty() ) {
+                        targetedY =  6000;
+                    }
+                    if(!Player.combinationsTypesSavedFishesMissing.get(0).isEmpty() ) {
+                        targetedY = 3500;
+                    }*/
+
+                    int targetedX = 8500;                    
 
                     if(ds.goCenter){  
                         if(x > 4000 && x < 6000 ){
                             ds.resetState();                    
                         }else{
-                            order = String.format("MOVE 5000 9000 %d", lightNumber);
+                            targetedX = 5000;
                         }
                         if(y > 8500) ds.goUp = true;             
                     }
@@ -211,7 +236,7 @@ class Player {
                             ds.resetState();  
                             ds.setGoCenter(true);                    
                         }else{
-                            order = String.format("MOVE 1500 9000 %d", lightNumber);
+                            targetedX = 1000;
                         }
                         if(y > 8500) ds.goUp = true;             
                     }
@@ -221,11 +246,13 @@ class Player {
                             ds.resetState();   
                             ds.setGoCenter(true);                     
                         }else{
-                            order = String.format("MOVE 8500 3000 %d", lightNumber);
+                            targetedX = 9000;
 
                         }   
                         if(y > 8500) ds.goUp = true;                          
                     }
+
+                    order = String.format("MOVE %d %d %d",targetedX, targetedY, lightNumber);
                 }
                 System.out.println(order);            
                 
@@ -256,7 +283,7 @@ class Player {
     }
   }
 
-  public static void updateCombinationsFishesMissing(List<Integer> myScans, Map<Integer, FishDetail> fishDetails) {
+   public static void updateCombinationsFishesMissing(List<Integer> myScans, Map<Integer, FishDetail> fishDetails) {
     for (int fishId: myScans) {
       FishDetail fish = fishDetails.get(fishId);
       combinationsColorsSavedFishesMissing.get(fish.color()).remove(fishId);
