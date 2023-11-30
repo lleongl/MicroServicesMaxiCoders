@@ -63,9 +63,8 @@ class Player {
 
     static Map<Integer,Set<Integer>> combinationsColors = new HashMap<>();
     static Map<Integer,Set<Integer>> combinationsTypes = new HashMap<>();
-  static Map<Integer,Set<Integer>> combinationsColorsFishesMissing;
-  static Map<Integer,Set<Integer>> combinationsTypesFishesMissing;
-
+    static Map<Integer,Set<Integer>> combinationsColorsFishesMissing = new HashMap<>();
+    static Map<Integer,Set<Integer>> combinationsTypesFishesMissing = new HashMap<>();
     public Vector findFish(int id){
         return null;
     }
@@ -75,26 +74,29 @@ class Player {
 
         Map<Integer, FishDetail> fishDetails = new HashMap<>();
 
-   int fishCount = in.nextInt();
-    for (int i = 0; i < fishCount; i++) {
-      int fishId = in.nextInt();
-      int color = in.nextInt();
-      int type = in.nextInt();
-      fishDetails.put(fishId, new FishDetail(color, type));
+       int fishCount = in.nextInt();
+        for (int i = 0; i < fishCount; i++) {
+          int fishId = in.nextInt();
+          int color = in.nextInt();
+          int type = in.nextInt();
+          fishDetails.put(fishId, new FishDetail(color, type));
 
-      if (color != -1) {
-        if (!combinationsColors.containsKey(color)) {
-          combinationsColors.put(color, new HashSet<>());
+          if (color != -1) {
+            if (!combinationsColors.containsKey(color)) {
+              combinationsColors.put(color, new HashSet<>());
+            }
+
+            combinationsColors.get(color).add(fishId);
+
+            if (!combinationsTypes.containsKey(type)) {
+              combinationsTypes.put(type, new HashSet<>());
+            }
+            combinationsTypes.get(type).add(fishId);
+          }
         }
-
-        combinationsColors.get(color).add(fishId);
-
-        if (!combinationsTypes.containsKey(type)) {
-          combinationsTypes.put(type, new HashSet<>());
-        }
-        combinationsTypes.get(type).add(fishId);
-      }
-    }
+        combinationsColorsFishesMissing.putAll(combinationsColors);
+        combinationsTypesFishesMissing.putAll(combinationsTypes);
+        printMissingCombinations();
 
         // game loop
         while (true) {
@@ -121,10 +123,6 @@ class Player {
                 int fishId = in.nextInt();
                 foeScans.add(fishId);
             }
-            combinationsColorsFishesMissing =  new HashMap<>(combinationsColors);
-            combinationsTypesFishesMissing = new HashMap<>(combinationsTypes);
-            printMissingCombinations();
-            
 
             int myDroneCount = in.nextInt();
             for (int i = 0; i < myDroneCount; i++) {
@@ -152,8 +150,6 @@ class Player {
                 droneById.put(droneId, drone);
                 foeDrones.add(drone);
             }
-
-            
 
             int droneScanCount = in.nextInt();
             for (int i = 0; i < droneScanCount; i++) {
@@ -209,7 +205,7 @@ class Player {
                     }                    
                 }
                 ds.fleeMonster -= 1 ;
-                if(shouldResurface ( myDrones, fishDetails)){
+                if(shouldResurface (myDrones, fishDetails, myScans, foeScans)){
                      System.err.println(String.format("should resurfance  %b ", true ) );
                     ds.setGoUp(true);
                 }
@@ -284,75 +280,122 @@ class Player {
       combinationsColorsFishesMissing.get(fish.color()).remove(fishId);
       combinationsTypesFishesMissing.get(fish.type()).remove(fishId);
     }
-    //drone 1 radars
-    for(int i=0; i<40; i++){
-      boolean found = false;
-      for (Map.Entry<Integer, List<RadarBlip>> blipListEntry : myRadarBlips.entrySet()) {
-        for(RadarBlip blip:  blipListEntry.getValue()){
-          if(blip.fishId() == i)
-            found = true;
-        }
-      }
 
-      if(found == false){
-        combinationsColorsFishesMissing.get(0).remove(i);
-        combinationsTypesFishesMissing.get(0).remove(i);
-        combinationsColorsFishesMissing.get(1).remove(i);
-        combinationsTypesFishesMissing.get(1).remove(i);
-        combinationsColorsFishesMissing.get(2).remove(i);
-        combinationsTypesFishesMissing.get(2).remove(i);
-      }
+    //todo: check fish ids
+    Set<Integer> unscannableFishes = Set.of(0,1,2,3,4,5,6,7,8,9,10,11,12);
+
+    // remove fishes still on the map, the rest are unscannable
+    List<RadarBlip> blipsDrone0 = myRadarBlips.get(0);
+    for (RadarBlip blip : blipsDrone0) {
+        unscannableFishes.remove(blip.fishId());
+    }
+
+    // remove unscannable fishes from the list of fishes we want to get
+    for (int escapedFish: unscannableFishes) {
+        combinationsColorsFishesMissing.get(0).remove(escapedFish);
+        combinationsColorsFishesMissing.get(1).remove(escapedFish);
+        combinationsColorsFishesMissing.get(2).remove(escapedFish);
+        combinationsColorsFishesMissing.get(3).remove(escapedFish);
+        combinationsTypesFishesMissing.get(0).remove(escapedFish);
+        combinationsTypesFishesMissing.get(1).remove(escapedFish);
+        combinationsTypesFishesMissing.get(2).remove(escapedFish);
     }
 
     // System.err.println("UPDATE!!");
     // printMissingCombinations();
   }
 
-  public static boolean shouldResurface (List<Drone> myDrones, Map<Integer, FishDetail> fishDetails) {
-    boolean res = false;
-    for (Drone drone: myDrones) {
-      for (int scannedFishId: drone.scans()) {
-        FishDetail fish = fishDetails.get(scannedFishId);
-        boolean removeColorRes = combinationsColorsFishesMissing.get(fish.color()).remove(scannedFishId);
-        if (removeColorRes) {
-          System.err.println("Removed Color + " + scannedFishId);
+    public static boolean shouldResurface(List<Drone> myDrones, Map<Integer, FishDetail> fishDetails, List<Integer> myScans, List<Integer> foeScans) {
+        Set<Integer> allScans = new HashSet<>(myScans);
+        for (Drone drone : myDrones) {
+            allScans.addAll(drone.scans());
         }
 
-        boolean removeTypeRes = combinationsTypesFishesMissing.get(fish.type()).remove(scannedFishId);
-        if (removeTypeRes) {
-          System.err.println("Removed type + " + scannedFishId);
+        boolean res = false;
+        for (Drone drone: myDrones) {
+            for (int scannedFishId: drone.scans()) {
+                FishDetail fish = fishDetails.get(scannedFishId);
+                boolean removeColorRes = combinationsColorsFishesMissing.get(fish.color()).remove(scannedFishId);
+                if (removeColorRes) {
+                    System.err.println("Removed Color + " + scannedFishId);
+                }
+
+                boolean removeTypeRes = combinationsTypesFishesMissing.get(fish.type()).remove(scannedFishId);
+                if (removeTypeRes) {
+                    System.err.println("Removed type + " + scannedFishId);
+                }
+
+                // if all fishes of 1 color just collected
+                if (removeColorRes && combinationsColorsFishesMissing.get(fish.color()).isEmpty()
+                && !foeHasAlreadyCompletedCombinationColor(fish.color(), foeScans)) {
+                    Set<Integer> allFishesForColor = combinationsColors.get(fish.color());
+                    int scannedFishesForColor = 0;
+                    for (int fishId: allFishesForColor) {
+                        if (allScans.contains(fishId)) {
+                            scannedFishesForColor++;
+                        }
+                    }
+
+                    // all 3 fishes of the same color
+                    if (scannedFishesForColor == 3) {
+                        res = true;
+                    }
+                }
+
+                // if all fishes of 1 type just collected
+                if (removeTypeRes && combinationsTypesFishesMissing.get(fish.type()).isEmpty()
+                && !foeHasAlreadyCompletedCombinationType(fish.type(), foeScans)) {
+                    Set<Integer> allFishesForType = combinationsTypes.get(fish.type());
+                    int scannedFishesForType = 0;
+                    for (int fishId: allFishesForType) {
+                        if (allScans.contains(fishId)) {
+                            scannedFishesForType++;
+                        }
+                    }
+                    // all 4 fishes of the same type
+                    if (scannedFishesForType == 4) {
+                        res = true;
+                    }
+                }
+            }
         }
 
-        if ((removeColorRes && combinationsColorsFishesMissing.get(fish.color()).isEmpty())
-            || (removeTypeRes && combinationsTypesFishesMissing.get(fish.type()).isEmpty())) {
+        printMissingCombinations();
 
-          //TODO check foe hasn't completed the same combination
-          res =  true;
-        }
-      }
+        return res;
     }
 
-    int computeScore = 0;
+    public static boolean foeHasAlreadyCompletedCombinationColor(int color, List<Integer> foeScans) {
+        Set<Integer> allFishesForColor = combinationsColors.get(color);
+        int scannedFishesForColor = 0;
+        for (int fishId: allFishesForColor) {
+            if (foeScans.contains(fishId)) {
+                scannedFishesForColor++;
+            }
+        }
 
+        // all 3 fishes of the same color
+        return scannedFishesForColor == 3;
+    }
 
-    printMissingCombinations();
+    public static boolean foeHasAlreadyCompletedCombinationType(int type, List<Integer> foeScans) {
+        Set<Integer> allFishesForType = combinationsTypes.get(type);
+        int scannedFishesForType = 0;
+        for (int fishId: allFishesForType) {
+            if (foeScans.contains(fishId)) {
+                scannedFishesForType++;
+            }
+        }
 
-    res = false;
-    return res;
-  }
+        // all 4 fishes of the same type
+        return scannedFishesForType == 4;
+    }
 
-  public int computeScore(List<Drone> myDrones) {
-    int res = 0;
+    public int computeScore(List<Drone> myDrones) {
+        int res = 0;
 
-    return res;
-  }
-
-  public Vector findFish() {
-    Vector res = new Vector(0,0);
-
-    return res;
-  }
-
+        return res;
+    }
 
    public static Vector findFish(int fishId, Map<Integer, List<RadarBlip>> myRadarBlips, Map<Integer, Drone> droneById, Map<Integer, FishDetail> fishDetails) {
     Vector res;
