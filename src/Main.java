@@ -277,12 +277,16 @@ class Player {
       combinationsColorsSavedFishesMissing.get(fish.color()).remove(fishId);
       combinationsTypesSavedFishesMissing.get(fish.type()).remove(fishId);
     }
+
+    // System.err.println("UPDATE!!");
+    // printMissingCombinations();
   }
 
   public static boolean shouldResurface (List<Drone> myDrones, Map<Integer, FishDetail> fishDetails) {
     Map<Integer, Set<Integer>> missingFishesColors = new HashMap<>(combinationsColorsSavedFishesMissing);
     Map<Integer, Set<Integer>> missingFishesTypes = new HashMap<>(combinationsTypesSavedFishesMissing);
 
+    boolean res = false;
     for (Drone drone: myDrones) {
       for (int scannedFishId: drone.scans()) {
         FishDetail fish = fishDetails.get(scannedFishId);
@@ -293,16 +297,33 @@ class Player {
 
         boolean removeTypeRes = missingFishesTypes.get(fish.type()).remove(scannedFishId);
         if (removeTypeRes) {
-          System.err.println("Removed Type + " + scannedFishId);
+          System.err.println("Removed type + " + scannedFishId);
         }
 
         if ((removeColorRes && missingFishesColors.get(fish.color()).isEmpty())
             || (removeTypeRes && missingFishesTypes.get(fish.type()).isEmpty())) {
-          return true;
+
+          //TODO check foe hasn't completed the same combination
+          res =  true;
         }
       }
     }
 
-    return false;
+    printMissingCombinations();
+
+    res = false;
+    return res;
+  }
+
+  public int computeScore(List<Drone> myDrones) {
+    int res = 0;
+
+    return res;
+  }
+
+  public Vector findFish() {
+    Vector res = new Vector(0,0);
+
+    return res;
   }
 }
