@@ -9,6 +9,11 @@ record Vector(int x, int y) {
         // Applying the Euclidean distance formula: sqrt((x2 - x1)^2 + (y2 - y1)^2)
         return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     }
+
+  @Override
+  public String toString() {
+    return "(" + this.x + ", " + this.y + ")";
+  }
 }
 
 record FishDetail(int color, int type) {}
@@ -366,9 +371,105 @@ class Player {
     return res;
   }
 
-  public Vector findFish() {
-    Vector res = new Vector(0,0);
+  public static Vector findFish(int fishId, Map<Integer, List<RadarBlip>> myRadarBlips, Map<Integer, Drone> droneById, Map<Integer, FishDetail> fishDetails) {
+    Vector res;
+    record RadarRes(Vector dronePos, String dir) {}
+    RadarRes[] radarRes = new RadarRes[2];
 
+    int i = 0;
+    for (Map.Entry<Integer, List<RadarBlip>> entry: myRadarBlips.entrySet()) {
+      Vector dronePos = droneById.get(entry.getKey()).pos();
+      List<RadarBlip> blips = entry.getValue();
+      String dir;
+      for (RadarBlip blip: blips) {
+        if (blip.fishId() == fishId) {
+          dir = blip.dir();
+          radarRes[i] = new RadarRes(dronePos, dir);
+          break;
+        }
+      }
+      i++;
+    }
+
+    int dirDistance = 1000;
+    String dirForMostLeft;
+    Vector mostLeftPos;
+    String dirForMostRight;
+    Vector mostRightPos;
+    String dirForMostTop;
+    Vector mostTopPos;
+    String dirForMostBottom;
+    Vector mostBottomPos;
+
+    if (radarRes[0].dronePos().x() < radarRes[1].dronePos().x()) {
+      dirForMostLeft = radarRes[0].dir();
+      mostLeftPos = radarRes[0].dronePos();
+      dirForMostRight = radarRes[1].dir();
+      mostRightPos = radarRes[1].dronePos();
+    } else {
+      dirForMostLeft = radarRes[1].dir();
+      mostLeftPos = radarRes[1].dronePos();
+      dirForMostRight = radarRes[0].dir();
+      mostRightPos = radarRes[0].dronePos();
+    }
+
+    if (radarRes[0].dronePos().y() < radarRes[1].dronePos().y()) {
+      dirForMostTop = radarRes[0].dir();
+      mostTopPos = radarRes[0].dronePos();
+      dirForMostBottom = radarRes[1].dir();
+      mostBottomPos = radarRes[1].dronePos();
+    } else {
+      dirForMostTop = radarRes[1].dir();
+      mostTopPos = radarRes[1].dronePos();
+      dirForMostBottom = radarRes[0].dir();
+      mostBottomPos = radarRes[0].dronePos();
+    }
+
+    int x = 0;
+    int y = 0;
+    if ("TL".equals(dirForMostLeft) || "BL".equals(dirForMostLeft)) {
+      x = 0;
+    } else if ("TR".equals(dirForMostRight) || "BR".equals(dirForMostRight)) {
+      x = 9999;
+    } else {
+      x = (mostLeftPos.x() + mostRightPos.x()) / 2;
+    }
+
+    int minY = 0;
+    int maxY = 9999;
+    if (fishDetails.get(fishId).type() == 0) {
+      minY = 2500;
+      maxY = 5000;
+    } else if (fishDetails.get(fishId).type() == 1) {
+      minY = 5000;
+      maxY = 7500;
+    } else {
+      // type == 2
+      minY = 7500;
+      maxY = 10000;
+    }
+
+    if ("TL".equals(dirForMostTop) || "TR".equals(dirForMostTop)) {
+      if (minY <= (mostTopPos.y() - dirDistance) && (mostTopPos.y() - dirDistance) <= maxY) {
+        y = mostTopPos.y() - dirDistance;
+      } else {
+        y = (minY + maxY) / 2;
+      }
+    } else if ("BL".equals(dirForMostBottom) || "BR".equals(dirForMostBottom)) {
+      if (minY <= (mostBottomPos.y() + dirDistance) && (mostBottomPos.y() + dirDistance) <= maxY) {
+        y = mostBottomPos.y() + dirDistance;
+      } else {
+        y = (minY + maxY) / 2;
+      }
+    } else {
+      y = (mostBottomPos.y() + mostTopPos.y()) / 2;
+      if (minY > y || y > maxY) {
+        y = (minY + maxY) / 2;
+      }
+    }
+
+
+    res = new Vector(x,y);
     return res;
   }
 }
