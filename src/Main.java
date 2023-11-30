@@ -20,41 +20,44 @@ record Drone(int droneId, Vector pos, boolean dead, int battery, List<Integer> s
 record RadarBlip(int fishId, String dir) {}
 
  class DroneState{
-    public boolean randomLeft = false;
-    public boolean randomRight = false;
+    public boolean goCenter = false;
     public boolean goUp = false;
     public boolean chaseFish = false;
     public boolean findFish = false;
     public boolean fleeMonster = false;
 
     public DroneState(boolean first){
-        if(first){
-            randomLeft = true;
-        }else{
-            randomRight = true;
-        }
+
     }
-    public void setRandomLeft(boolean b){randomLeft = b;}
-    public void setRandomRight(boolean b){randomRight = b;}
+
+    public void setGoCenter(boolean b){goCenter = b;}
     public void setGoUp(boolean b){goUp = b;}
     public void setChaseFish(boolean b){chaseFish = b;}
     public void setFindFish(boolean b){findFish = b;}
 
     public void resetState(){
-        randomLeft = false;
-        randomRight = false;
+        goCenter = false;
         goUp = false;
         chaseFish = false;
         findFish = false;
         fleeMonster = false;
     }
+
+    public boolean noState(){
+        return !goCenter && !goUp && !chaseFish && !findFish && !fleeMonster;
+    }
 }
+
 
 
 class Player {
     public static DroneState firstDroneState = new DroneState(true);
     public static DroneState secondDroneState = new DroneState(false);
     public static int turnNumber = 0 ;
+
+    public Vector findFish(int id){
+        return null;
+    }
 
     public static void main(String[] args) {
         Scanner in = new Scanner(System.in);
@@ -158,18 +161,25 @@ class Player {
             String order = "wait 0 no order inputed";
             boolean putTheLightOn = Player.turnNumber % 3 == 0;
             int lightNumber = putTheLightOn ? 1 : 0; 
-            boolean firstDrone = true;
             // System.out.println(String.format("MOVE %d %d %d", targetX, targetY, light));
+
             for (Drone drone : myDrones) {
                 int x = drone.pos().x();
                 int y = drone.pos().y();
-                DroneState ds = firstDrone ? Player.firstDroneState : Player.secondDroneState;
-                firstDrone = false;
+
+
+                DroneState ds = drone.droneId() ==0 || drone.droneId() == 1 ? Player.firstDroneState : Player.secondDroneState;
                 System.err.println(String.format("go up: %b ", ds.goUp));
 
 
-                
-                if(ds.goUp ){
+                for(Fish f: visibleFishes){
+                    if(fishDetails.get(f.fishId()).type() == -1 ){
+                        ds.fleeMonster = true;
+                        lightNumber = 0;
+                    }
+                }
+
+                if(ds.goUp || ds.fleeMonster){
                     if(Vector.calculateDistance(drone.pos(), new Vector(x,300)) < 200){                        
                         ds.resetState();                        
                     }else{
@@ -177,31 +187,37 @@ class Player {
                     }
                 }
 
-                if(ds.randomLeft){  
+                if(ds.goCenter){  
+                    if(x > 4000 && x < 6000 ){
+                        ds.resetState();                    
+                    }else{
+                        order = String.format("MOVE 5000 9000 %d", lightNumber);
+                    }
+                    if(y > 8500) ds.goUp = true;             
+                }
+
+                if(ds.noState() && x < 5000){  
                     if(x < 2000){
                         ds.resetState();  
-                        ds.setRandomRight(true);                    
+                        ds.setGoCenter(true);                    
                     }else{
                         order = String.format("MOVE 1500 9000 %d", lightNumber);
                     }
                     if(y > 8500) ds.goUp = true;             
                 }
                
-                if(ds.randomRight){  
+                if(ds.noState() && x >= 5000){  
                     if(x > 8000){
                         ds.resetState();   
-                        ds.setRandomLeft(true);                     
+                        ds.setGoCenter(true);                     
                     }else{
                         order = String.format("MOVE 8500 3000 %d", lightNumber);
 
                     }   
-                    if(y > 8500) ds.goUp = true;             
-             
+                    if(y > 8500) ds.goUp = true;                          
                 }
 
-                firstDrone = false;
-                System.out.println(order);    
-                
+                System.out.println(order);            
                 
             }
         }
