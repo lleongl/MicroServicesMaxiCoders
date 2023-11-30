@@ -19,12 +19,42 @@ record Drone(int droneId, Vector pos, boolean dead, int battery, List<Integer> s
 
 record RadarBlip(int fishId, String dir) {}
 
+ class DroneState{
+    public boolean randomLeft = false;
+    public boolean randomRight = false;
+    public boolean goUp = false;
+    public boolean chaseFish = false;
+    public boolean findFish = false;
+    public boolean fleeMonster = false;
+
+    public DroneState(boolean first){
+        if(first){
+            randomLeft = true;
+        }else{
+            randomRight = true;
+        }
+    }
+    public void setRandomLeft(boolean b){randomLeft = b;}
+    public void setRandomRight(boolean b){randomRight = b;}
+    public void setGoUp(boolean b){goUp = b;}
+    public void setChaseFish(boolean b){chaseFish = b;}
+    public void setFindFish(boolean b){findFish = b;}
+
+    public void resetState(){
+        randomLeft = false;
+        randomRight = false;
+        goUp = false;
+        chaseFish = false;
+        findFish = false;
+        fleeMonster = false;
+    }
+}
+
+
 class Player {
-        public static boolean downLeft = false;
-        public static    boolean downRight = false;
-         public static   boolean downCenter = false;
-        public static    boolean goUp = false;
-        public static int turnNumber = 0 ;
+    public static DroneState firstDroneState = new DroneState(true);
+    public static DroneState secondDroneState = new DroneState(false);
+    public static int turnNumber = 0 ;
 
     public static void main(String[] args) {
         Scanner in = new Scanner(System.in);
@@ -125,53 +155,52 @@ class Player {
             }
 
             
-
             String order = "wait 0 no order inputed";
             boolean putTheLightOn = Player.turnNumber % 3 == 0;
+            int lightNumber = putTheLightOn ? 1 : 0; 
             boolean firstDrone = true;
             // System.out.println(String.format("MOVE %d %d %d", targetX, targetY, light));
             for (Drone drone : myDrones) {
                 int x = drone.pos().x();
                 int y = drone.pos().y();
-                System.err.println(String.format("go up: %b ", Player.goUp));
-                if(y > 8900 || Player.goUp  ){
-                    Player.goUp = true;  
-                    if(Vector.calculateDistance(drone.pos(), new Vector(5000,300)) < 200){                        
-                        Player.goUp = false;                        
+                DroneState ds = firstDrone ? Player.firstDroneState : Player.secondDroneState;
+                firstDrone = false;
+                System.err.println(String.format("go up: %b ", ds.goUp));
+
+
+                
+                if(ds.goUp ){
+                    if(Vector.calculateDistance(drone.pos(), new Vector(x,300)) < 200){                        
+                        ds.resetState();                        
                     }else{
-                        if (putTheLightOn) 
-                            order = new String("MOVE 5000 300 0");
-                        else
-                            order =  new String("MOVE 5000 300 1");
+                        order = String.format("MOVE %d 300 %d", x ,lightNumber);
                     }
                 }
 
-                if(firstDrone == true && Player.goUp == false){
-                    
-                    if(Vector.calculateDistance(drone.pos(), new Vector(2700,9000)) < 1000){
-                        Player.goUp = true;                        
+                if(ds.randomLeft){  
+                    if(x < 2000){
+                        ds.resetState();  
+                        ds.setRandomRight(true);                    
                     }else{
-                        if (putTheLightOn) 
-                            order = new String("MOVE 2700 9000 0");
-                        else
-                            order =  new String("MOVE 2700 9000 1");
+                        order = String.format("MOVE 1500 9000 %d", lightNumber);
                     }
+                    if(y > 8500) ds.goUp = true;             
                 }
                
-                if(firstDrone == false && Player.goUp == false){
-                    if(Vector.calculateDistance(drone.pos(), new Vector(7400,8000)) < 1000){
-                        Player.downCenter = true;
-                        Player.goUp = true;                        
+                if(ds.randomRight){  
+                    if(x > 8000){
+                        ds.resetState();   
+                        ds.setRandomLeft(true);                     
                     }else{
-                        if (putTheLightOn) 
-                            order = new String("MOVE 7400 9000 0");
-                        else
-                            order =  new String("MOVE 7400 9000 1");
-                    }
-    
+                        order = String.format("MOVE 8500 3000 %d", lightNumber);
+
+                    }   
+                    if(y > 8500) ds.goUp = true;             
+             
                 }
+
                 firstDrone = false;
-                 System.out.println(order);          
+                System.out.println(order);    
                 
                 
             }
