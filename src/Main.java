@@ -1,10 +1,10 @@
 import java.util.*;
 
 // Define the data structures as records
-record Vector(int x, int y) {
+record Vector(double x, double y) {
     static double calculateDistance(Vector point1, Vector point2) {
-        int deltaX = point2.x() - point1.x();
-        int deltaY = point2.y() - point1.y();
+        double deltaX = point2.x() - point1.x();
+        double deltaY = point2.y() - point1.y();
 
         // Applying the Euclidean distance formula: sqrt((x2 - x1)^2 + (y2 - y1)^2)
         return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -13,6 +13,29 @@ record Vector(int x, int y) {
     public String toString() {
       return "(" + this.x + ", " + this.y + ")";
      }
+
+    public Vector add(Vector other) {
+        return new Vector(this.x + other.x, this.y + other.y);
+    }
+
+    public Vector multiply(int scalar) {
+        return new Vector(this.x * scalar, this.y * scalar);
+    }
+
+    public Vector normalize() {
+        double mag = Math.sqrt(x * x + y * y);
+        return new Vector(x / mag, y / mag);
+    }
+
+    public Vector perpendicularClockwise()
+    {
+        return new Vector(this.y(), -this.x());
+    }
+
+    public Vector perpendicularCounterClockwise()
+    {
+        return new Vector(-this.y(), this.x());
+    }
 }
 
 record FishDetail(int color, int type) {}
@@ -188,8 +211,8 @@ class Player {
             Vector firstDroneTarget = null; 
 
             for (Drone drone : myDrones) {
-                int x = drone.pos().x();
-                int y = drone.pos().y();
+                int x = (int) drone.pos().x();
+                int y = (int) drone.pos().y();
                 if (y < 1500) lightNumber =0;
 
                 DroneState ds = drone.droneId() ==0 || drone.droneId() == 1 ? Player.firstDroneState : Player.secondDroneState;
@@ -198,6 +221,8 @@ class Player {
                 Vector fleeingVector = null;
                 for(Fish f: visibleFishes){
                     if(f.detail().color() == -1 && Vector.calculateDistance(drone.pos(),f.pos()) < 2000){
+                        //todo: do something with targetToAvoidMonster
+                        Vector targetToAvoidMonster = getTargetToAvoidMonster(f.pos(), drone.pos(), ds);
                         ds.fleeMonster = 5; // number of turn fleeing
                         lightNumber = 0;
                         System.err.println(String.format("Detecting monster !!!!  %b ", f.fishId() ) );
@@ -458,7 +483,7 @@ class Player {
     } else if ("TR".equals(dirForMostRight) || "BR".equals(dirForMostRight)) {
       x = 9999;
     } else {
-      x = (mostLeftPos.x() + mostRightPos.x()) / 2;
+      x = (int) (mostLeftPos.x() + mostRightPos.x()) / 2;
     }
 
     int minY = 0;
@@ -477,18 +502,18 @@ class Player {
 
     if ("TL".equals(dirForMostTop) || "TR".equals(dirForMostTop)) {
       if (minY <= (mostTopPos.y() - dirDistance) && (mostTopPos.y() - dirDistance) <= maxY) {
-        y = mostTopPos.y() - dirDistance;
+        y = (int) mostTopPos.y() - dirDistance;
       } else {
         y = (minY + maxY) / 2;
       }
     } else if ("BL".equals(dirForMostBottom) || "BR".equals(dirForMostBottom)) {
       if (minY <= (mostBottomPos.y() + dirDistance) && (mostBottomPos.y() + dirDistance) <= maxY) {
-        y = mostBottomPos.y() + dirDistance;
+        y = (int) mostBottomPos.y() + dirDistance;
       } else {
         y = (minY + maxY) / 2;
       }
     } else {
-      y = (mostBottomPos.y() + mostTopPos.y()) / 2;
+      y = (int) (mostBottomPos.y() + mostTopPos.y()) / 2;
       if (minY > y || y > maxY) {
         y = (minY + maxY) / 2;
       }
@@ -498,4 +523,27 @@ class Player {
     res = new Vector(x,y);
     return res;
   }
+
+    public static Vector getTargetToAvoidMonster(Vector monsterPos, Vector dronePos, DroneState ds) {
+
+        Vector directionVector = new Vector(dronePos.x() - monsterPos.x(), dronePos.y() - monsterPos.y()).normalize();
+        int distance = 540;
+        Vector monsterNextPos = monsterPos.add(directionVector.multiply(distance));
+
+        Vector perpendicularVectorCandidate1 = directionVector.perpendicularClockwise().normalize();
+        Vector perpendicularVectorCandidate2 = directionVector.perpendicularCounterClockwise().normalize();
+
+        Vector perpendicularVector;
+        if (!ds.goUp) {
+            perpendicularVector = perpendicularVectorCandidate1.y() >= 0 ? perpendicularVectorCandidate1 : perpendicularVectorCandidate2;
+        } else {
+            perpendicularVector = perpendicularVectorCandidate1.y() <= 0 ? perpendicularVectorCandidate1 : perpendicularVectorCandidate2;
+        }
+
+        int distancePerpendicular = 600;
+
+        Vector newDroneCoordinates = dronePos.add(perpendicularVector.multiply(distancePerpendicular));
+
+        return newDroneCoordinates;
+    }
 }
