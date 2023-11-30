@@ -25,6 +25,7 @@ record RadarBlip(int fishId, String dir) {}
     public boolean chaseFish = false;
     public boolean findFish = false;
     public boolean fleeMonster = false;
+    public int lastLight = 0 ;
 
     public DroneState(boolean first){
 
@@ -177,31 +178,29 @@ class Player {
                 myRadarBlips.get(droneId).add(new RadarBlip(fishId, radar));
             }
             updateCombinationsFishesMissing( myScans, fishDetails);
-            shouldResurface ( myDrones, fishDetails);
             
             String order = "wait 0 no order inputed";
-            boolean putTheLightOn = Player.turnNumber % 3 == 0;
-            int lightNumber = putTheLightOn ? 1 : 0; 
+            int lightNumber = Player.turnNumber % 3 == 0 ? 1 : 0; 
             // System.out.println(String.format("MOVE %d %d %d", targetX, targetY, light));
 
             for (Drone drone : myDrones) {
                 int x = drone.pos().x();
                 int y = drone.pos().y();
-
+                if (y < 1500) lightNumber =0;
 
                 DroneState ds = drone.droneId() ==0 || drone.droneId() == 1 ? Player.firstDroneState : Player.secondDroneState;
                 System.err.println(String.format("go up: %b ", ds.goUp));
 
 
                 for(Fish f: visibleFishes){
-                    if(f.detail().color() == -1 && Vector.calculateDistance(drone.pos(),f.pos()) < 1500){
+                    if(f.detail().color() == -1 && Vector.calculateDistance(drone.pos(),f.pos()) < 2000){
                         ds.fleeMonster = true;
                         lightNumber = 0;
                         System.err.println(String.format("Detecting monster !!!!  %b ", f.fishId() ) );
                     }
                 }
 
-                if(ds.goUp || ds.fleeMonster){
+                if( shouldResurface ( myDrones, fishDetails) || ds.fleeMonster){
                     if(Vector.calculateDistance(drone.pos(), new Vector(x,300)) < 200){                        
                         ds.resetState();                        
                     }else{
@@ -209,51 +208,51 @@ class Player {
                             order = String.format("MOVE %d 300 %d going up !!!", x ,lightNumber);
                         else
                             order = String.format("MOVE %d 300 %d Detecting monster !!!", x ,lightNumber);
+                        
                     }
                 }else{
                     //no fleeing, no scanning, trying to find fish
-                    int targetedY = 8500;
-                    /*if(!Player.combinationsTypesSavedFishesMissing.get(1).isEmpty() ) {
-                        targetedY =  6000;
-                    }
-                    if(!Player.combinationsTypesSavedFishesMissing.get(0).isEmpty() ) {
-                        targetedY = 3500;
-                    }*/
+                    int targetedY = 9000;
 
-                    int targetedX = 8500;                    
+                    if(!Player.combinationsTypesSavedFishesMissing.get(0).isEmpty() ) {
+                        targetedY = 4000;
+                    }
+                    if(!Player.combinationsTypesSavedFishesMissing.get(1).isEmpty() ) {
+                        targetedY =  6500;
+                    }
+
+                    int targetedX = 5000;                    
 
                     if(ds.goCenter){  
-                        if(x > 4000 && x < 6000 ){
+                        if(x > 4500 && x < 5500 ){
                             ds.resetState();                    
                         }else{
                             targetedX = 5000;
                         }
-                        if(y > 8500) ds.goUp = true;             
                     }
 
-                    if(ds.noState() && x < 5000){  
-                        if(x < 2000){
+                    if(ds.noState() && x < 6000){  
+                        if(x < 1200){
                             ds.resetState();  
                             ds.setGoCenter(true);                    
                         }else{
                             targetedX = 1000;
                         }
-                        if(y > 8500) ds.goUp = true;             
                     }
                 
-                    if(ds.noState() && x >= 5000){  
-                        if(x > 8000){
+                    if(ds.noState() && x >= 4000){  
+                        if(x > 8800){
                             ds.resetState();   
                             ds.setGoCenter(true);                     
                         }else{
                             targetedX = 9000;
 
                         }   
-                        if(y > 8500) ds.goUp = true;                          
                     }
 
                     order = String.format("MOVE %d %d %d",targetedX, targetedY, lightNumber);
                 }
+                ds.lastLight=lightNumber;
                 System.out.println(order);            
                 
             }
