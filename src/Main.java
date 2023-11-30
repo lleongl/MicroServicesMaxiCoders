@@ -24,7 +24,7 @@ record RadarBlip(int fishId, String dir) {}
     public boolean goUp = false;
     public boolean chaseFish = false;
     public boolean findFish = false;
-    public boolean fleeMonster = false;
+    public int fleeMonster = 0;
     public int lastLight = 0 ;
 
     public DroneState(boolean first){
@@ -35,17 +35,18 @@ record RadarBlip(int fishId, String dir) {}
     public void setGoUp(boolean b){goUp = b;}
     public void setChaseFish(boolean b){chaseFish = b;}
     public void setFindFish(boolean b){findFish = b;}
+    public void setFleeMonster(int b){fleeMonster = b;}
 
     public void resetState(){
         goCenter = false;
         goUp = false;
         chaseFish = false;
         findFish = false;
-        fleeMonster = false;
+        fleeMonster = 0;
     }
 
     public boolean noState(){
-        return !goCenter && !goUp && !chaseFish && !findFish && !fleeMonster;
+        return !goCenter && !goUp && !chaseFish && !findFish && fleeMonster != 0;
     }
 }
 
@@ -177,7 +178,9 @@ class Player {
                 String radar = in.next();
                 myRadarBlips.get(droneId).add(new RadarBlip(fishId, radar));
             }
-            updateCombinationsFishesMissing( myScans, fishDetails);
+
+            System.err.println(String.format("NUmber of radar blip: %d ", myRadarBlipCount));
+            updateCombinationsFishesMissing( myScans, fishDetails, myRadarBlips);
             
             String order = "wait 0 no order inputed";
             int lightNumber = Player.turnNumber % 3 == 0 ? 1 : 0; 
@@ -189,36 +192,45 @@ class Player {
                 if (y < 1500) lightNumber =0;
 
                 DroneState ds = drone.droneId() ==0 || drone.droneId() == 1 ? Player.firstDroneState : Player.secondDroneState;
-                System.err.println(String.format("go up: %b ", ds.goUp));
+                // System.err.println(String.format("go up: %b ", ds.goUp));
 
-
+                Vector fleeingVector = null;
                 for(Fish f: visibleFishes){
                     if(f.detail().color() == -1 && Vector.calculateDistance(drone.pos(),f.pos()) < 2000){
-                        ds.fleeMonster = true;
+                        ds.fleeMonster = 3; // 3 turn fleeing
                         lightNumber = 0;
                         System.err.println(String.format("Detecting monster !!!!  %b ", f.fishId() ) );
-                    }
+                        fleeingVector = new Vector(2 *x -f.pos().x() , 2 *y -f.pos().y() ); 
+                    }                    
                 }
+                ds.fleeMonster -= 1 ;
 
-                if( shouldResurface ( myDrones, fishDetails) || ds.fleeMonster){
+                if( shouldResurface ( myDrones, fishDetails) || ds.fleeMonster >0){
                     if(Vector.calculateDistance(drone.pos(), new Vector(x,300)) < 200){                        
                         ds.resetState();                        
                     }else{
-                        if(!ds.fleeMonster)
-                            order = String.format("MOVE %d 300 %d going up !!!", x ,lightNumber);
-                        else
-                            order = String.format("MOVE %d 300 %d Detecting monster !!!", x ,lightNumber);
-                        
+                        if(ds.fleeMonster > 0)
+                            order = String.format("MOVE %d 300 %d going up !!!", x ,0);
+                        else{
+                            if(fleeingVector != null){
+                               order = String.format("MOVE %d %d %d Detecting monster !!!", fleeingVector.x(), fleeingVector.y() ,0);
+                            }else{
+                                order = String.format("MOVE %d 300 %d going up !!!", x > 5000? 9999 : 0 ,0);
+                            }
+                        }
                     }
                 }else{
-                    //no fleeing, no scanning, trying to find fish
-                    int targetedY = 9000;
+                    //no fleeing, no going, trying to go down to find fishes 
+                    int targetedY = 0;
 
                     if(!Player.combinationsTypesSavedFishesMissing.get(0).isEmpty() ) {
                         targetedY = 4000;
                     }
                     if(!Player.combinationsTypesSavedFishesMissing.get(1).isEmpty() ) {
                         targetedY =  6500;
+                    }
+                    if(!Player.combinationsTypesSavedFishesMissing.get(2).isEmpty() ) {
+                        targetedY =  8000;
                     }
 
                     int targetedX = 5000;                    
@@ -282,11 +294,30 @@ class Player {
     }
   }
 
-   public static void updateCombinationsFishesMissing(List<Integer> myScans, Map<Integer, FishDetail> fishDetails) {
+   public static void updateCombinationsFishesMissing(List<Integer> myScans, Map<Integer, FishDetail> fishDetails, Map<Integer, List<RadarBlip>> myRadarBlips) {
     for (int fishId: myScans) {
       FishDetail fish = fishDetails.get(fishId);
       combinationsColorsSavedFishesMissing.get(fish.color()).remove(fishId);
       combinationsTypesSavedFishesMissing.get(fish.type()).remove(fishId);
+    }
+    //drone 1 radars
+    for(int i=0; i<40; i++){
+        boolean found = false;
+        for (Map.Entry<Integer, List<RadarBlip>> blipListEntry : myRadarBlips.entrySet()) {
+            for(RadarBlip blip:  blipListEntry.getValue()){
+                if(blip.fishId() == i)
+                    found = true;
+            }
+        }
+
+        if(found == false){
+            combinationsColorsSavedFishesMissing.get(0).remove(i);
+            combinationsTypesSavedFishesMissing.get(0).remove(i);
+            combinationsColorsSavedFishesMissing.get(1).remove(i);
+            combinationsTypesSavedFishesMissing.get(1).remove(i);
+            combinationsColorsSavedFishesMissing.get(2).remove(i);
+            combinationsTypesSavedFishesMissing.get(2).remove(i);
+        }
     }
 
     // System.err.println("UPDATE!!");
@@ -319,6 +350,9 @@ class Player {
         }
       }
     }
+
+    int computeScore = 0;
+
 
     printMissingCombinations();
 
