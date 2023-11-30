@@ -162,7 +162,8 @@ class Player {
                 myRadarBlips.get(droneId).add(new RadarBlip(fishId, radar));
             }
 
-            
+            updateCombinationsFishesMissing( myScans, fishDetails);
+
             String order = "wait 0 no order inputed";
             boolean putTheLightOn = Player.turnNumber % 3 == 0;
             int lightNumber = putTheLightOn ? 1 : 0; 
