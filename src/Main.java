@@ -284,11 +284,11 @@ class Player {
                                 targetVector = possibleTarget;
                             }else{
                                 if(firstDrone){
-                                    if(possibleTarget.x() <  targetVector.x() ){
+                                    if(possibleTarget.y() >  targetVector.y() || (possibleTarget.y() ==  targetVector.y()  &&  possibleTarget.x() <  targetVector.x())  ){
                                       targetVector = possibleTarget;
                                   }
                                 }else{
-                                    if(possibleTarget.x() >  targetVector.x() ){
+                                    if(possibleTarget.y() >  targetVector.y() || (possibleTarget.y() ==  targetVector.y()  &&  possibleTarget.x() > targetVector.x())  ){
                                       targetVector = possibleTarget;
                                   }
                                 }                                
