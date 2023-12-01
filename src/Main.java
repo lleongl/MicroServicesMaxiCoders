@@ -368,7 +368,7 @@ class Player {
                 }
 
                 // if all fishes of 1 type just collected
-                if (removeTypeRes && combinationsTypesFishesMissing.get(fish.type()).isEmpty()
+                if (fish.type() != 0 && removeTypeRes && combinationsTypesFishesMissing.get(fish.type()).isEmpty()
                 && !foeHasAlreadyCompletedCombinationType(fish.type(), foeScans)) {
                     Set<Integer> allFishesForType = combinationsTypes.get(fish.type());
                     int scannedFishesForType = 0;
