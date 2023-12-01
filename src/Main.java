@@ -200,8 +200,12 @@ class Player {
                 myRadarBlips.get(droneId).add(new RadarBlip(fishId, radar));
             }
 
-          combinationsColorsFishesMissing.putAll(combinationsColors);
-          combinationsTypesFishesMissing.putAll(combinationsTypes);
+          for (Map.Entry<Integer, Set<Integer>> entry: combinationsColors.entrySet()) {
+            combinationsColorsFishesMissing.put(entry.getKey(), new HashSet<>(entry.getValue()));
+          }
+          for (Map.Entry<Integer, Set<Integer>> entry: combinationsTypes.entrySet()) {
+            combinationsTypesFishesMissing.put(entry.getKey(), new HashSet<>(entry.getValue()));
+          }
 
             System.err.println(String.format("NUmber of radar blip: %d ", myRadarBlipCount));
             updateCombinationsFishesMissingBecauseSaved( myScans, fishDetails, myRadarBlips);
