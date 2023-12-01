@@ -38,9 +38,22 @@ record Vector(double x, double y) {
     }
 }
 
+record Point(int x, int y) {
+  static double calculateDistance(Point point1, Point point2) {
+    double deltaX = point2.x() - point1.x();
+    double deltaY = point2.y() - point1.y();
+    // Applying the Euclidean distance formula: sqrt((x2 - x1)^2 + (y2 - y1)^2)
+    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+  }
+}
+
 record FishDetail(int color, int type) {}
 
-record Fish(int fishId, Vector pos, Vector speed, FishDetail detail) {}
+record Fish(int fishId, Vector pos, Vector speed, FishDetail detail) {
+  public boolean isMonster() {
+    return detail.type() == -1;
+  }
+}
 
 record Drone(int droneId, Vector pos, boolean dead, int battery, List<Integer> scans) {}
 
@@ -83,6 +96,25 @@ class Player {
     public static DroneState firstDroneState = new DroneState(true);
     public static DroneState secondDroneState = new DroneState(false);
     public static int turnNumber = 0 ;
+
+      public static String T_HEADING_DIR = "T";
+      public static String TR_HEADING_DIR = "TR";
+      public static String R_HEADING_DIR = "R";
+      public static String BR_HEADING_DIR = "BR";
+      public static String B_HEADING_DIR = "B";
+      public static String BL_HEADING_DIR = "BL";
+      public static String L_HEADING_DIR = "L";
+      public static String TL_HEADING_DIR = "TL";
+
+      public static int T_HEADING_VAL = 0;
+      public static int TR_HEADING_VAL = 45;
+      public static int R_HEADING_VAL = 90;
+      public static int BR_HEADING_VAL = 135;
+      public static int B_HEADING_VAL = 180;
+      public static int BL_HEADING_VAL = 225;
+      public static int L_HEADING_VAL = 270;
+      public static int TL_HEADING_VAL = 315;
+      public static int DRONE_MAX_600 = 600;
 
     static Map<Integer,Set<Integer>> combinationsColors = new HashMap<>();
     static Map<Integer,Set<Integer>> combinationsTypes = new HashMap<>();
@@ -199,6 +231,7 @@ class Player {
                 String radar = in.next();
                 myRadarBlips.get(droneId).add(new RadarBlip(fishId, radar));
             }
+            // printAgressiveMonsterByDrone(myDrones, visibleFishes, myRadarBlips);
 
           for (Map.Entry<Integer, Set<Integer>> entry: combinationsColors.entrySet()) {
             combinationsColorsFishesMissing.put(entry.getKey(), new HashSet<>(entry.getValue()));
@@ -618,4 +651,112 @@ class Player {
 
       return true;
     }
+
+
+    public static void printAgressiveMonsterByDrone(List<Drone> myDrones, List<Fish> visibles, Map<Integer, List<RadarBlip>> myRadarBlips) {
+        System.err.println("------------ AGGRESSIVE MONSTERS BY DRONE ------------");
+        for (Drone drone : myDrones) {
+          int droneId = drone.droneId();
+          DroneState ds = droneId == 0 || droneId == 1 ? Player.firstDroneState : Player.secondDroneState;
+          for (Fish visible : visibles) {
+            if (visible.isMonster()) {
+              Fish monster = visible;
+              double distance = Vector.calculateDistance(drone.pos(), monster.pos());
+              //  0-> 800
+              //  1-> 2000
+              // Aggressive if distance < 800||2000
+              double aggressiveDistance = ds.lastLight == 0 ? 800 : 2000;
+              if (distance < aggressiveDistance) {
+                List<RadarBlip> radarBlips = myRadarBlips.get(droneId);
+                String dir = "";
+                for (RadarBlip radarBlip : radarBlips) {
+                  if (radarBlip.fishId() == monster.fishId()) {
+                      dir = radarBlip.dir();
+                      break;
+                  }
+                }
+                System.err.println(String.format("droneId(%s), aggressiveDistance(%s), distance(%s), fishId(%s), dir(%s)", droneId, aggressiveDistance, distance, monster.fishId(), dir));
+                printAgressiveMonsterNextPos(drone, monster);
+              }
+            }
+          }
+        }
+    }
+
+    private static void printAgressiveMonsterNextPos(Drone drone, Fish monster) {
+        System.err.println("------------ AGGRESSIVE MONSTER NEXT POS ------------");
+        Vector dronePos = drone.pos();
+        Point dronePoint = new Point((int)dronePos.x(), (int)dronePos.y());
+        Vector monsterPos = monster.pos();
+        Point monsterPoint = new Point((int)monsterPos.x(), (int)monsterPos.y());
+        // double heading = getHeading(monsterPoint, dronePoint);
+        // Point nextMonsterPos = getHeadingEndPoint(monsterPoint, (int) heading, 540);
+        // getNextDronePosss(dronePoint, nextMonsterPos);
+    }
+
+    public static double getHeading(Point p1, Point p2) {
+        if (p1.equals(p2)) {
+          throw new IllegalArgumentException();
+        }
+        double a = -Math.atan2(p1.y() - p2.y(), p1.x() - p2.x());
+        a = a * 180.0 / Math.PI;
+        a -= 90;
+        if (a >= 360.0) {
+          a -= 360.0;
+        }
+        if (a < 0.0) {
+          a += 360.0;
+        }
+        return a;
+    }
+
+    public static Point getHeadingEndPoint(Point source, int heading, int distance) {
+        int x, y;
+        x = (int)source.x() + (int) Math.round( (Math.sin(Math.toRadians(heading)) * distance) );
+        y = (int)source.y() + (int) Math.round( (Math.cos(Math.toRadians(heading)) * distance) );
+        return new Point(x, y);
+    }
+
+    public static Map<String, Point> getNextDronePosss(Point drone, Point nextMonsterPos) {
+        Map<String, Point> nextDronePossibilities = new HashMap<>();
+        nextDronePossibilities.put(T_HEADING_DIR,  getHeadingEndPoint(drone, T_HEADING_VAL, DRONE_MAX_600));
+        nextDronePossibilities.put(TR_HEADING_DIR, getHeadingEndPoint(drone, TR_HEADING_VAL, DRONE_MAX_600));
+        nextDronePossibilities.put(R_HEADING_DIR,  getHeadingEndPoint(drone, R_HEADING_VAL, DRONE_MAX_600));
+        nextDronePossibilities.put(BR_HEADING_DIR, getHeadingEndPoint(drone, BR_HEADING_VAL, DRONE_MAX_600));
+        nextDronePossibilities.put(B_HEADING_DIR,  getHeadingEndPoint(drone, B_HEADING_VAL, DRONE_MAX_600));
+        nextDronePossibilities.put(BL_HEADING_DIR, getHeadingEndPoint(drone, BL_HEADING_VAL, DRONE_MAX_600));
+        nextDronePossibilities.put(L_HEADING_DIR,  getHeadingEndPoint(drone, L_HEADING_VAL, DRONE_MAX_600));
+        nextDronePossibilities.put(TL_HEADING_DIR, getHeadingEndPoint(drone, TL_HEADING_VAL, DRONE_MAX_600));
+        //System.out.println(nextDronePossibilities);
+        excludeUnsafe(nextDronePossibilities, nextMonsterPos);
+        //System.out.println(nextDronePossibilities);
+        return nextDronePossibilities;
+    }
+
+    public static void excludeUnsafe(Map<String, Point> nextDronePossibilities, Point nextMonsterPos) {
+        Iterator<Map.Entry<String, Point>> iter = nextDronePossibilities.entrySet().iterator();
+        while (iter.hasNext()) {
+          Map.Entry<String, Point> nextDronePossibility = iter.next();
+          Point nextDronePos = nextDronePossibility.getValue();
+          double distance = Point.calculateDistance(nextDronePos, nextMonsterPos);
+          // if (nextDronePos.distance(nextMonsterPos) < 800) {
+          if (distance < 800) {
+            iter.remove();
+          }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
