@@ -252,10 +252,10 @@ class Player {
                         ds.resetState();                        
                     }else{
                         if(ds.fleeMonster <=  0)
-                            order = String.format("MOVE %d 300 %d going up !!!", x ,0);
+                            order = String.format("MOVE %d 300 %d going up !!!", (int) x ,0);
                         else{
                             if(fleeingVector != null){
-                               order = String.format("MOVE %d %d %d Detecting monster !!!", fleeingVector.x(), fleeingVector.y() ,0);
+                               order = String.format("MOVE %d %d %d Detecting monster !!!", (int) fleeingVector.x(), (int) fleeingVector.y() ,0);
                             }else{
                                 order = String.format("MOVE 5000 0 0 going up !!!");
                             }
@@ -281,8 +281,7 @@ class Player {
                     }
                     firstDroneTarget =  targetVector;                    
                     if(targetVector != null)
-                        order = String.format("MOVE %d %d %d",targetVector.x(), targetVector.y(), lightNumber);
-                }
+                         order = String.format("MOVE %d %d %d", (int) targetVector.x(), (int) targetVector.y(), lightNumber);
                 ds.lastLight=lightNumber;
                 System.out.println(order);                     
             }
