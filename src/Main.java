@@ -210,11 +210,15 @@ class Player {
             int lightNumber = Player.turnNumber % 3 == 0 ? 1 : 0; 
             // System.out.println(String.format("MOVE %d %d %d", targetX, targetY, light));
             Vector firstDroneTarget = null; 
+            Vector firstDronePosition = null; 
+            boolean firstDrone = true;
 
             for (Drone drone : myDrones) {
                 int x = (int) drone.pos().x();
                 int y = (int) drone.pos().y();
                 if (y < 1500) lightNumber =0;
+                if(firstDrone)
+                  firstDronePosition = drone.pos();
 
                 DroneState ds = drone.droneId() ==0 || drone.droneId() == 1 ? Player.firstDroneState : Player.secondDroneState;
                 // System.err.println(String.format("go up: %b ", ds.goUp));
@@ -243,8 +247,9 @@ class Player {
                 }
 
               ds.fleeMonster -= 1 ;
-                if(shouldResurface (myDrones, fishDetails, myScans, foeScans)){
-                     System.err.println(String.format("should resurfance  %b ", true ) );
+              
+                if(shouldResurface (myDrones, fishDetails, myScans, foeScans)){                 
+                    System.err.println(String.format("should resurfance  %b ", true ) );
                     ds.setGoUp(true);
                 }
                 if( ds.goUp || ds.fleeMonster >0){
@@ -268,20 +273,33 @@ class Player {
                     for (Map.Entry<Integer, Set<Integer>> listOfMissingFish : Player.combinationsTypesFishesMissing.entrySet()) {
                         for( int fishId: listOfMissingFish.getValue()){
                             Vector possibleTarget = findFish( fishId,  myRadarBlips, droneById, fishDetails) ;
+                            //System.err.println(String.format("Considering possible target  %s ",possibleTarget.toString() ) );
+
                             if(targetVector == null){
                                 targetVector = possibleTarget;
                             }else{
-                                if(
-                                Vector.calculateDistance(drone.pos(), possibleTarget) < Vector.calculateDistance(drone.pos(), targetVector) 
-                                && ( firstDroneTarget == null || Vector.calculateDistance(firstDroneTarget, possibleTarget) > 2000) )
-                                targetVector = possibleTarget;
+                                if(firstDrone){
+                                    if(possibleTarget.x() <  targetVector.x() ){
+                                      targetVector = possibleTarget;
+                                  }
+                                }else{
+                                    if(possibleTarget.x() >  targetVector.x() ){
+                                      targetVector = possibleTarget;
+                                  }
+                                }                                
+                                
                             }
                             
                         }
                     }
-                    firstDroneTarget =  targetVector;                    
+                    firstDroneTarget =  targetVector; 
+                    firstDrone = false;
+                   
                     if(targetVector != null)
-                         order = String.format("MOVE %d %d %d", (int) targetVector.x(), (int) targetVector.y(), lightNumber);
+                        order = String.format("MOVE %d %d %d Moving too %s", (int) targetVector.x(), (int) targetVector.y(), lightNumber, targetVector.toString());
+                            firstDrone = false;
+
+                }
                 ds.lastLight=lightNumber;
                 System.out.println(order);                     
             }
