@@ -344,8 +344,14 @@ class Player {
     //todo: check fish ids
     Set<Integer> unscannableFishes = new HashSet<>(Set.of(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20));
 
-    // remove fishes still on the map, the rest are unscannable
-    List<RadarBlip> blipsDrone0 = myRadarBlips.get(0);
+    // remove fishes still on the map, the rest are unscannable    
+    List<RadarBlip> blipsDrone0 = null; 
+    if(myRadarBlips.get(0) != null){
+      blipsDrone0 = myRadarBlips.get(0);
+    }
+    if(myRadarBlips.get(1) != null){
+      blipsDrone0 = myRadarBlips.get(1);
+    }
     for (RadarBlip blip : blipsDrone0) {
         unscannableFishes.remove(blip.fishId());
     }
