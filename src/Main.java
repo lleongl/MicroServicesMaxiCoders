@@ -117,8 +117,6 @@ class Player {
             combinationsTypes.get(type).add(fishId);
           }
         }
-        combinationsColorsFishesMissing.putAll(combinationsColors);
-        combinationsTypesFishesMissing.putAll(combinationsTypes);
         printMissingCombinations();
 
         // game loop
@@ -201,6 +199,9 @@ class Player {
                 String radar = in.next();
                 myRadarBlips.get(droneId).add(new RadarBlip(fishId, radar));
             }
+
+          combinationsColorsFishesMissing.putAll(combinationsColors);
+          combinationsTypesFishesMissing.putAll(combinationsTypes);
 
             System.err.println(String.format("NUmber of radar blip: %d ", myRadarBlipCount));
             updateCombinationsFishesMissingBecauseSaved( myScans, fishDetails, myRadarBlips);
