@@ -95,6 +95,10 @@ record RadarBlip(int fishId, String dir) {}
 class Player {
     public static DroneState firstDroneState = new DroneState(true);
     public static DroneState secondDroneState = new DroneState(false);
+
+    public static Vector fleeingVectorD1 = null;
+    public static Vector fleeingVectorD2 = null;
+
     public static int turnNumber = 0 ;
 
       public static String T_HEADING_DIR = "T";
@@ -278,10 +282,17 @@ class Player {
                   Fish f = nearByMonsters.get(0);
                   //todo: do something with targetToAvoidMonster
                   Vector targetToAvoidMonster = getTargetToAvoidMonster(nearByMonsters, drone.pos(), ds);
-                  ds.fleeMonster = 5; // number of turn fleeing
+                  ds.fleeMonster = 4; // number of turn fleeing
                   lightNumber = 0;
                   System.err.println(String.format("Detecting monster !!!!  %b ", f.fishId() ) );
-                  fleeingVector = new Vector(2 *x -f.pos().x() , 2 *y -f.pos().y() );
+                  Vector nextMonsterPos = getAgressiveMonsterNextPos(drone, f);
+
+                  fleeingVector = new Vector(x -nextMonsterPos.x() , y - nextMonsterPos.y() );
+
+                  if(firstDrone)
+                     Player.fleeingVectorD1 = fleeingVector;
+                  else
+                     Player.fleeingVectorD2 = fleeingVector;
                 }
 
               ds.fleeMonster -= 1 ;
@@ -297,8 +308,11 @@ class Player {
                         if(ds.fleeMonster <=  0)
                             order = String.format("MOVE %d 300 %d going up !!!", (int) x ,0);
                         else{
-                            if(fleeingVector != null){
-                               order = String.format("MOVE %d %d %d Detecting monster !!!", (int) fleeingVector.x(), (int) fleeingVector.y() ,0);
+                           if((firstDrone && Player.fleeingVectorD1 != null) || (!firstDrone && Player.fleeingVectorD2 != null)){
+                                if(firstDrone)
+                                 order = String.format("MOVE %d %d %d Detecting monster !!!", (int) (drone.pos().x() + Player.fleeingVectorD1.x()), (int) (drone.pos().y() + Player.fleeingVectorD1.y()) ,0);
+                                   else
+                                order = String.format("MOVE %d %d %d Detecting monster !!!", (int)(drone.pos().x()  + Player.fleeingVectorD2.x()), (int) ( drone.pos().y() +  Player.fleeingVectorD2.y()) ,0);
                             }else{
                                 order = String.format("MOVE 5000 0 0 going up !!!");
                             }
@@ -676,28 +690,27 @@ class Player {
                   }
                 }
                 System.err.println(String.format("droneId(%s), aggressiveDistance(%s), distance(%s), fishId(%s), dir(%s)", droneId, aggressiveDistance, distance, monster.fishId(), dir));
-                printAgressiveMonsterNextPos(drone, monster);
+                getAgressiveMonsterNextPos(drone, monster);
               }
             }
           }
         }
     }
 
-    private static void printAgressiveMonsterNextPos(Drone drone, Fish monster) {
+    private static Vector getAgressiveMonsterNextPos(Drone drone, Fish monster) {
         System.err.println("------------ AGGRESSIVE MONSTER NEXT POS ------------");
         Vector dronePos = drone.pos();
         Point dronePoint = new Point((int)dronePos.x(), (int)dronePos.y());
         Vector monsterPos = monster.pos();
         Point monsterPoint = new Point((int)monsterPos.x(), (int)monsterPos.y());
-        // double heading = getHeading(monsterPoint, dronePoint);
-        // Point nextMonsterPos = getHeadingEndPoint(monsterPoint, (int) heading, 540);
-        // getNextDronePosss(dronePoint, nextMonsterPos);
+        double heading = getHeading(monsterPoint, dronePoint);
+        Point nextMonsterPos = getHeadingEndPoint(monsterPoint, (int) heading, 540);
+        //  getNextDronePosss(dronePoint, nextMonsterPos);
+
+        return new Vector(nextMonsterPos.x(), nextMonsterPos.y());
     }
 
     public static double getHeading(Point p1, Point p2) {
-        if (p1.equals(p2)) {
-          throw new IllegalArgumentException();
-        }
         double a = -Math.atan2(p1.y() - p2.y(), p1.x() - p2.x());
         a = a * 180.0 / Math.PI;
         a -= 90;
@@ -729,7 +742,7 @@ class Player {
         nextDronePossibilities.put(TL_HEADING_DIR, getHeadingEndPoint(drone, TL_HEADING_VAL, DRONE_MAX_600));
         //System.out.println(nextDronePossibilities);
         excludeUnsafe(nextDronePossibilities, nextMonsterPos);
-        //System.out.println(nextDronePossibilities);
+        System.out.println(nextDronePossibilities);
         return nextDronePossibilities;
     }
 
