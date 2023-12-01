@@ -219,17 +219,29 @@ class Player {
                 // System.err.println(String.format("go up: %b ", ds.goUp));
 
                 Vector fleeingVector = null;
+                List<Fish> nearByMonsters = new LinkedList<>();
                 for(Fish f: visibleFishes){
-                    if(f.detail().color() == -1 && Vector.calculateDistance(drone.pos(),f.pos()) < 2000){
-                        //todo: do something with targetToAvoidMonster
-                        Vector targetToAvoidMonster = getTargetToAvoidMonster(f.pos(), drone.pos(), ds);
-                        ds.fleeMonster = 5; // number of turn fleeing
-                        lightNumber = 0;
-                        System.err.println(String.format("Detecting monster !!!!  %b ", f.fishId() ) );
-                        fleeingVector = new Vector(2 *x -f.pos().x() , 2 *y -f.pos().y() ); 
-                    }                    
+                  if(f.detail().color() == -1 && Vector.calculateDistance(drone.pos(),f.pos()) < 2000) {
+                    nearByMonsters.add(f);
+                  }
                 }
-                ds.fleeMonster -= 1 ;
+                if(!nearByMonsters.isEmpty()){
+
+                  Comparator<Fish> distanceComparator = Comparator.comparingDouble(fish ->
+                      Vector.calculateDistance(fish.pos(), drone.pos()));
+                  Collections.sort(nearByMonsters, distanceComparator);
+
+                  // closest visible monster
+                  Fish f = nearByMonsters.get(0);
+                  //todo: do something with targetToAvoidMonster
+                  Vector targetToAvoidMonster = getTargetToAvoidMonster(nearByMonsters, drone.pos(), ds);
+                  ds.fleeMonster = 5; // number of turn fleeing
+                  lightNumber = 0;
+                  System.err.println(String.format("Detecting monster !!!!  %b ", f.fishId() ) );
+                  fleeingVector = new Vector(2 *x -f.pos().x() , 2 *y -f.pos().y() );
+                }
+
+              ds.fleeMonster -= 1 ;
                 if(shouldResurface (myDrones, fishDetails, myScans, foeScans)){
                      System.err.println(String.format("should resurfance  %b ", true ) );
                     ds.setGoUp(true);
@@ -524,8 +536,9 @@ class Player {
     return res;
   }
 
-    public static Vector getTargetToAvoidMonster(Vector monsterPos, Vector dronePos, DroneState ds) {
+    public static Vector getTargetToAvoidMonster(List<Fish> nearByMonsters, Vector dronePos, DroneState ds) {
 
+        Vector monsterPos = nearByMonsters.get(0).pos();
         Vector directionVector = new Vector(dronePos.x() - monsterPos.x(), dronePos.y() - monsterPos.y()).normalize();
         int distance = 540;
         Vector monsterNextPos = monsterPos.add(directionVector.multiply(distance));
@@ -544,6 +557,36 @@ class Player {
 
         Vector newDroneCoordinates = dronePos.add(perpendicularVector.multiply(distancePerpendicular));
 
-        return newDroneCoordinates;
+        if (isValidTargetToAvoidMonster(newDroneCoordinates, nearByMonsters)) {
+          return newDroneCoordinates;
+        } else {
+
+          // flee 1
+          newDroneCoordinates = dronePos.add(directionVector.multiply(600));
+          if (isValidTargetToAvoidMonster(newDroneCoordinates, nearByMonsters)) {
+            return newDroneCoordinates;
+          } else {
+            // flee 2
+            Vector fleeVector = new Vector(-perpendicularVector.x(), -perpendicularVector.y());
+            newDroneCoordinates = dronePos.add(fleeVector.multiply(600));
+            return newDroneCoordinates;
+          }
+        }
+    }
+
+    public static boolean isValidTargetToAvoidMonster(Vector target, List<Fish> nearByMonsters) {
+
+      if (target.x() < 0 || target.x() > 9999 || target.y() < 0 || target.y() > 9999) {
+        return false;
+      }
+
+      int minAuthorizedDistance = 500;
+      for (Fish monster: nearByMonsters) {
+        if (Vector.calculateDistance(monster.pos(), target) < minAuthorizedDistance) {
+          return false;
+        }
+      }
+
+      return true;
     }
 }
