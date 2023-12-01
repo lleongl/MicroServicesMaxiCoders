@@ -216,6 +216,7 @@ class Player {
             Vector firstDroneTarget = null; 
             Vector firstDronePosition = null; 
             boolean firstDrone = true;
+            boolean shouldResurface = shouldResurface (myDrones, fishDetails, myScans, foeScans);
 
             for (Drone drone : myDrones) {
                 int x = (int) drone.pos().x();
@@ -252,7 +253,7 @@ class Player {
 
               ds.fleeMonster -= 1 ;
               
-                if(shouldResurface (myDrones, fishDetails, myScans, foeScans)){                 
+                if(shouldResurface){                 
                     System.err.println(String.format("should resurfance  %b ", true ) );
                     ds.setGoUp(true);
                 }
